@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贪吃蛇游戏</title>
+    <style>
+        #game {
+            background-color: #135076;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="game" ></canvas>
+    
+    <script>
+        let canvas = document.getElementById('game');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;//初始化背景
+
+        window.addEventListener('resize', function() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        let con= canvas.getContext('2d');
+        let centerX = canvas.width / 2;
+        let centerY = canvas.height / 2;
+        let width=canvas.width * 0.03;
+        let height=canvas.width * 0.03;
+
+        
+        let snakeX=centerX;
+        let snakeY=centerY;
+        let box=canvas.width * 0.03;
+        let direction = "RIGHT";
+
+        let snake = [{x: snakeX, y: snakeY}];
+
+        let foodx = centerX+3*box;
+        let foody = centerY; 
+
+        function draw() {
+            con.clearRect(0, 0, canvas.width, canvas.height); // 清除整个画布
+            
+            if(direction == "RIGHT") snakeX += box;
+            if(direction == "LEFT") snakeX -= box;
+            if(direction == "UP") snakeY -= box;
+            if(direction == "DOWN") snakeY += box;
+
+            for(let i = 0; i < snake.length; i++) {
+                con.fillStyle='black';
+                con.fillRect(snake[i].x, snake[i].y, width, height); // 绘制蛇的每一部分
+            }
+
+            var img = new Image();
+            img.src = 'OIP.jpg'; 
+
+            con.drawImage(img, foodx, foody, width,height);
+            
+            if(snakeX>canvas.width) snakeX=1;
+            if(snakeX<1) snakeX=canvas.width;
+            if(snakeY>canvas.width) snakeY=1;
+            if(snakeY<1) snakeY=canvas.height;
+            if(snakeX == foodx && snakeY == foody) {
+                let newHead = {x: foodx, y: foody}
+                var img = new Image();
+                img.src = 'OIP.jpg'; 
+                img.onload = function() {
+                    var x1 = (Math.random()).toFixed(1);
+                    var y1 = (Math.random()).toFixed(1);
+                    foodx = x1*(canvas.width-width);
+                    foody = y1*(canvas.height-height);
+                };//随机地点函数 
+                snake.unshift(newHead);
+            } else {
+                snake.pop();
+            }
+            
+            let newHead = {x: snakeX, y: snakeY}
+            snake.unshift(newHead);
+
+        }
+
+        setInterval(draw, 1000); // 每1000毫秒调用一次draw函数
+
+
+
+        document.addEventListener('keydown', updateDirection);
+        function updateDirection(event) {
+            let key = event.keyCode;
+            if(key == 65 && direction != "RIGHT") direction = "LEFT";
+            else if(key == 87 && direction != "DOWN") direction = "UP";
+            else if(key == 68 && direction != "LEFT") direction = "RIGHT";
+            else if(key == 83 && direction != "UP") direction = "DOWN";
+        }//转向操作
+
+
+
+
+
+
+    
+    </script>
+</body>
+</html>

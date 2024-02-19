@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        #game-board {
+            position: relative;
+            height: 90vmin;
+            width: 90vmin;
+            background-image: url('微信图片_20231208175323.jpg');/*插入像作为背景的图片*/
+            background-size: cover; /* 图片铺满整个元素 */
+            border: 1px double red;/*创建游戏背景，高度和宽度都是相对于视口尺寸中较小的那个值的90%。这样可以使得游戏板的大小随着视口尺寸的变化而自适应调整，并用红色标记边框*/
+        }
+        .dot {
+            position: absolute;
+            height: 5%;
+            width: 5%;
+            background: black;
+        }/*为父元素的子元素，5%就是在背景中占据5%*/
+        .food {
+            position: absolute;
+            height: 5%;
+            width: 5%;
+            background-image: url('OIP.jpg');
+            background-size: cover; 
+            /*background: red;可以把上面背景替换调选择纯颜色*/
+        }
+        #congrats {
+            display: none;
+            position: fixed;/*将图片固定在右侧出现*/
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            z-index: 100;/*设置了层叠顺序，保证该元素位于其他元素的上方*/
+            border: 1px solid black;
+            background: white;
+            padding: 20px;
+            text-align: center;
+        }
+        #congrats img {
+            width: 100%;
+            height: auto;
+        }
+        #info {
+            display: flex;/*弹性容器布局，使得其内部的子元素可以通过弹性布局进行排列和对齐*/
+            justify-content: space-around;/* 属性指定了弹性布局中子元素在主轴上的对齐方式为平均分布，中间留有相等的空间*/
+        }
+        #info div {
+            border: 1px solid black;
+            padding: 10px;
+            background-color: #f0f0f0; /* 灰色背景 */
+            color: blue; /* 红色文字 */
+        }
+        #rules {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);/*通过 transform 属性的 translate 函数，将元素向左和向上分别平移自身宽度和高度的50%，从而实现完全居中*/
+            z-index: 100;
+            border: 1px solid black;
+            background: white;
+            padding: 20px;
+            text-align: center;/*将元素内文本内容居中对齐。*/
+        }
+        #controls {
+            display: flex;/*将 "controls" 元素设置为 Flexbox 布局，使子元素可以沿着主轴和交叉轴进行排列。*/
+            justify-content: space-around;/*设置主轴上的对齐方式，使子元素在主轴上平均分布，并留有相等的空间*/
+            align-items: center;
+        }
+        #controls div {
+            border: 1px solid black;
+            padding: 10px;
+            background-color: #f0f0f0; 
+            color: red; 
+        }
+    </style>
+</head>
+<body>
+    <div id="game-board"></div>
+    <div id="info">
+        <div>Score: <span id="score"></span></div>
+        <div>High Score: <span id="high-score"></span></div>
+        <div>Remaining Crosses: <span id="crosses"></span></div>
+    </div>
+    <div id="controls"> 
+        <div>
+            <label for="speed">选择速度:</label>
+            <input type="range" id="speed" min="50" max="200" value="100">
+        </div>
+        <button onclick="startGame()">开始游戏</button>
+    </div>
+    <div id="congrats"><img src="goutou.jpg" alt="恭喜！你创造了新的最高分！"></div>
+    <div id="rules">
+        <h2>游戏规则</h2>
+        <p>蛇会不断前进，你可以使用箭头键改变它的方向。</p>
+        <p>每吃到一个食物，蛇就会变长，得分也会增加。</p>
+        <p>每得到5分，就可以穿越一次边界。</p>
+        <p>如果蛇撞到自己或者超出边界（没有穿越次数时），游戏就会结束。</p>
+        <p>用W S A D分别控制上下左右移动。</p>
+        <p>点击开始游戏开始，死亡后点击开始游戏可继续游玩。</p>
+        <p>祝你好运！</p>
+        <button onclick="closeRules()">确认</button>
+    </div>
+    <script>
+        var dotSize = 5;
+        var gameBoardSize = 100;
+        var direction = { x: dotSize, y: 0 };
+        var snake = [{ top: 0, left: 0 }];
+        var food = null;
+        var score = 0;
+        var highScore = 0;
+        var speed = 100;
+        var crosses = 0;//初始化变量
+
+        function closeRules() {
+            document.getElementById('rules').style.display = 'none';
+        }/*关闭提示*/
+
+        function startGame() {
+            var rules = document.getElementById('rules');
+            if (rules.style.display !== 'none') {
+                return alert('请先阅读并确认游戏规则！');
+            }//当我们没有点确认规则时，是不可以进行游戏的
+            score = 0;
+            document.getElementById('score').innerText = score;//将变量score的值实时更新到页面中id为"score"的元素上，以便将最新的分数信息展示给用户
+            direction = { x: dotSize, y: 0 };//定义一个对象,
+            snake = [{ top: 0, left: 0 }];//创建蛇数组，每块部分都有一个位置
+            food = null;
+            speed = document.getElementById('speed').value;
+            crosses = 0;
+            document.getElementById('crosses').innerText = crosses;
+            document.getElementById('congrats').style.display = 'none';
+            updateGame();
+        }
+
+        function updateGame() {
+            var head = Object.assign({}, snake[0]); // 复制蛇头
+            head.top += direction.y;
+            head.left += direction.x;//移动方向
+            snake.unshift(head); //将更新后的 head 对象添加到蛇的头部，实现了蛇头的移动
+
+            if (food && food.top === head.top && food.left === head.left) {
+                food = null;
+                score++;
+                document.getElementById('score').innerText = score;
+                if (score > highScore) {
+                    highScore = score;
+                    document.getElementById('high-score').innerText = highScore;
+                    document.getElementById('congrats').style.display = 'block';//更新最高分展示祝贺图片
+                }
+                if (score % 5 === 0) {
+                    crosses++;
+                    document.getElementById('crosses').innerText = crosses;
+                }//增加穿墙的机会
+            } else {
+                snake.pop(); //如果没吃到食物，就移除最后一块，蛇就不会变长
+            }
+
+            if (crosses > 0 && (head.left < 0 || head.top < 0 || head.left >= gameBoardSize || head.top >= gameBoardSize)) {
+                crosses--;//免死机会
+                document.getElementById('crosses').innerText = crosses;
+                if (head.left < 0) head.left = gameBoardSize - dotSize;
+                if (head.top < 0) head.top = gameBoardSize - dotSize;
+                if (head.left >= gameBoardSize) head.left = 0;
+                if (head.top >= gameBoardSize) head.top = 0;
+            } else if (head.left < 0 || head.top < 0 || head.left >= gameBoardSize || head.top >= gameBoardSize) {
+                return alert('游戏结束!');
+            }//判断结束的方法
+
+            for (var i = 1; i < snake.length; i++) {
+                if (snake[i].top === head.top && snake[i].left === head.left) {
+                    return alert('游戏结束!');
+                }
+            }//碰到身体也会挂
+
+            if (!food) {
+                food = { top: Math.floor(Math.random() * gameBoardSize / dotSize) * dotSize, left: Math.floor(Math.random() * gameBoardSize / dotSize) * dotSize };
+            }//更新食物位置
+
+            drawGame();
+            setTimeout(updateGame, speed);//spped越大，更新越快
+        }
+
+        function drawGame() {
+            var gameBoard = document.getElementById('game-board');
+            gameBoard.innerHTML = '';
+            snake.forEach(function(dot) {
+                gameBoard.appendChild(createDot(dot.top, dot.left));//运用回调函数
+            });//遍历蛇身数组，画蛇
+            gameBoard.appendChild(createDot(food.top, food.left, 'food'));
+        }
+
+        function createDot(top, left, id) {
+            var dot = document.createElement('div');//创建一个新的 div 元素，并将其赋值给变量 dot
+            dot.classList.add(id || 'dot');//区分类型
+            dot.style.top = `${top}%`;//取出字符串代表的值，并进行赋值
+            dot.style.left = `${left}%`;//以游戏版为底的位置
+            return dot;
+        }//上面这两个函数是自己尝试失败后借鉴网上的
+
+        window.addEventListener('keydown', function(e) {
+            switch (e.key) {
+                case 'w':
+                    direction = { x: 0, y: -dotSize };
+                    break;
+                case 's':
+                    direction = { x: 0, y: dotSize };
+                    break;
+                case 'a':
+                    direction = { x: -dotSize, y: 0 };
+                    break;
+                case 'd':
+                    direction = { x: dotSize, y: 0 };
+                    break;
+            }
+        });//控制移动方向
+    </script>
+</body>
+</html>
